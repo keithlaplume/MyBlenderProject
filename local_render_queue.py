@@ -1,7 +1,6 @@
 import subprocess
 
-RENDER_QUEUE = [r"J:\UNTITLED_MARS_PROJECT\assets\materials\working_files\mars_sand_allrocks_albedo.blend",
-                r"J:\UNTITLED_MARS_PROJECT\assets\materials\working_files\mars_sand_allrocks_roughness.blend"]
+RENDER_QUEUE = [r"J:\UNTITLED_MARS_PROJECT\assets\materials\working_files\mars_sand_smallrocks_albedo.blend"]
 
 blender_path = '"C:/Program Files/Blender Foundation/Blender 3.4/blender.exe"'
 
