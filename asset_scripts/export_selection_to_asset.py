@@ -15,6 +15,17 @@ def create_baking_uvs(selection):
 
 
 def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
+    #get render settings
+    render_engine = bpy.context.scene.render.engine
+    samples = bpy.context.scene.cycles.samples
+    direct_pass = bpy.context.scene.render.bake.use_pass_direct
+    indirect_pass = bpy.context.scene.render.bake.use_pass_indirect
+
+    #set render settings
+    bpy.context.scene.render.engine = 'CYCLES'
+    bpy.context.scene.cycles.samples = 1
+    bpy.context.scene.render.bake.use_pass_direct = False
+    bpy.context.scene.render.bake.use_pass_indirect = False
 
     for bake_type in bake_list:
         size = final_size * oversample
@@ -41,6 +52,12 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
             new_image.filepath_raw = os.path.join(publish_path, asset_name, bake_type + ".jpg")
             new_image.file_format = 'JPEG'
             new_image.save()
+
+    #reset render settings
+    bpy.context.scene.render.engine = render_engine
+    bpy.context.scene.cycles.samples = samples
+    bpy.context.scene.render.bake.use_pass_direct = direct_pass
+    bpy.context.scene.render.bake.use_pass_indirect = indirect_pass
 
 
 def create_material_from_folder(folder, bake_list):
