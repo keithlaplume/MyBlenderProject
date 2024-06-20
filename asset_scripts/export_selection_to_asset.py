@@ -1,10 +1,12 @@
 import bpy
 import os
 
+bake_uvmap_name = "UVMap_Bake"
+
 
 def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
     for ob in selection:
-        bake_uvmap = ob.data.uv_layers.new(name="UVMap_Bake")
+        bake_uvmap = ob.data.uv_layers.new(name=bake_uvmap_name)
         bake_uvmap.active = True
 
     for bake_type in bake_list:
@@ -40,7 +42,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
 
 def create_material_from_folder(folder, bake_list):
-    new_mat = bpy.data.materials.new(asset_name)
+    new_mat = bpy.data.materials.new(os.path.basename(folder))
     new_mat.use_nodes = True
     mat_nodes = new_mat.node_tree.nodes
     bsdf = mat_nodes["Principled BSDF"]
@@ -63,7 +65,7 @@ def create_material_from_folder(folder, bake_list):
     return new_mat
 
 
-def export_selection():
+def export_selection(publish_path, asset_name):
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.object.delete(use_global=False, confirm=False)
     current_blend_file = bpy.data.filepath
@@ -72,42 +74,35 @@ def export_selection():
     bpy.ops.wm.save_as_mainfile(filepath=export_blend_path_full)
     bpy.ops.wm.open_mainfile(filepath=current_blend_file)
 
+def main(selection, publish_path, asset_name, bake_list, options):
+    bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
 
-# set initial processing values
-asset_name = "MaxHayOfficeBuildingTall"
-publish_path = "J:/StandardAssets/3D/Published"
-bake_list = ["diffuse", "emit", "roughness", "normal"]
-bake_uvmap_name = "UVMap_Bake"
-selection = bpy.context.selected_objects
+    # duplicate
+    bpy.ops.object.duplicate()
+    selection = bpy.context.selected_objects
 
-bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
+    new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
 
-# duplicate
-bpy.ops.object.duplicate()
-selection = bpy.context.selected_objects
+    for ob in selection:
+        # clean material
+        for i in range(len(ob.material_slots)):
+            bpy.context.object.active_material_index = i
+            bpy.ops.object.material_slot_remove()
+        # clean uv maps
+        uv_map_list = []
+        for uvmap in ob.data.uv_layers:
+            print(uvmap.name)
+            uv_map_list.append(uvmap.name)
 
-new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
+        for uvmap in uv_map_list:
+            if uvmap == bake_uvmap_name:
+                continue
+            else:
+                ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
 
-for ob in selection:
-    # clean material
-    for i in range(len(ob.material_slots)):
-        bpy.context.object.active_material_index = i
-        bpy.ops.object.material_slot_remove()
-    # clean uv maps
-    uv_map_list = []
-    for uvmap in ob.data.uv_layers:
-        print(uvmap.name)
-        uv_map_list.append(uvmap.name)
+        # set material
+        ob.data.materials.append(new_material)
+        # set location
+        bpy.context.object.location = [0, 0, 0]
 
-    for uvmap in uv_map_list:
-        if uvmap == "UVMap_Bake":
-            continue
-        else:
-            ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
-
-    # set material
-    ob.data.materials.append(new_material)
-    # set location
-    bpy.context.object.location = [0, 0, 0]
-
-export_selection()
+    export_selection(publish_path, asset_name)
