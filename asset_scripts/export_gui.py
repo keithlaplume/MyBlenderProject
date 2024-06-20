@@ -1,8 +1,10 @@
 import bpy
 import sys
+from importlib import reload
 
 sys.path.append("C:/Users/Keith/PycharmProjects/MyBlenderProject/asset_scripts/")
 import export_selection_to_asset
+reload(export_selection_to_asset)
 
 from bpy.props import (StringProperty,
                        BoolProperty,
