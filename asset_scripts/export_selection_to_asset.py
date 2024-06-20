@@ -71,12 +71,14 @@ def export_selection(publish_path, asset_name):
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.object.delete(use_global=False, confirm=False)
     current_blend_file = bpy.data.filepath
-    export_blend_path_full = os.path.join(publish_path, asset_name, asset_name + ".blend")
-    if not os.path.exists(export_blend_path_full):
-        os.mkdir(export_blend_path_full)
+    asset_full = os.path.normpath(os.path.join(publish_path, asset_name))
+    if not os.path.exists(asset_full):
+        os.mkdir(asset_full)
+    export_blend_path_full = os.path.normpath(os.path.join(publish_path, asset_name, asset_name + ".blend"))
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.wm.save_as_mainfile(filepath=export_blend_path_full)
-    bpy.ops.wm.open_mainfile(filepath=current_blend_file)
+    if current_blend_file.endswith(".blend"):
+        bpy.ops.wm.open_mainfile(filepath=current_blend_file)
 
 def main(selection, publish_path, asset_name, bake_list, options):
 
