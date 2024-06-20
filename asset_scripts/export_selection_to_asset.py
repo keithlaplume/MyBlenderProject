@@ -4,10 +4,17 @@ import os
 bake_uvmap_name = "UVMap_Bake"
 
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
+def create_baking_uvs(selection):
     for ob in selection:
         bake_uvmap = ob.data.uv_layers.new(name=bake_uvmap_name)
         bake_uvmap.active = True
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.mesh.select_all(action='SELECT')
+        bpy.ops.uv.smart_project(island_margin=0.00001)
+        bpy.ops.object.editmode_toggle()
+
+
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
 
     for bake_type in bake_list:
         size = final_size * oversample
@@ -26,11 +33,6 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                 uv_node.uv_map = bake_uvmap_name
                 node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
                 nodes.active = tex_node
-
-            bpy.ops.object.editmode_toggle()
-            bpy.ops.mesh.select_all(action='SELECT')
-            bpy.ops.uv.smart_project(island_margin=0.00001)
-            bpy.ops.object.editmode_toggle()
 
             bpy.ops.object.bake(type=bake_type.upper())
             new_image.scale(final_size, final_size)
@@ -75,34 +77,40 @@ def export_selection(publish_path, asset_name):
     bpy.ops.wm.open_mainfile(filepath=current_blend_file)
 
 def main(selection, publish_path, asset_name, bake_list, options):
-    bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
 
-    # duplicate
-    bpy.ops.object.duplicate()
-    selection = bpy.context.selected_objects
+    # override options to account for dependencies
+    if not options["do_new_uvs"]:
+        options["do_bake_textures"] = False
+    if not options["do_export"]:
+        options["do_center"] = False
 
-    new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
+    #let's do it
+    if options["do_new_uvs"]:
+        create_baking_uvs(selection)
+    if options["do_bake_textures"]:
+        bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
+        bpy.ops.object.duplicate()
+        selection = bpy.context.selected_objects
+        new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
+        for ob in selection:
+            # clean material
+            for i in range(len(ob.material_slots)):
+                bpy.context.object.active_material_index = i
+                bpy.ops.object.material_slot_remove()
+            # clean uv maps
+            uv_map_list = []
+            for uvmap in ob.data.uv_layers:
+                print(uvmap.name)
+                uv_map_list.append(uvmap.name)
 
-    for ob in selection:
-        # clean material
-        for i in range(len(ob.material_slots)):
-            bpy.context.object.active_material_index = i
-            bpy.ops.object.material_slot_remove()
-        # clean uv maps
-        uv_map_list = []
-        for uvmap in ob.data.uv_layers:
-            print(uvmap.name)
-            uv_map_list.append(uvmap.name)
-
-        for uvmap in uv_map_list:
-            if uvmap == bake_uvmap_name:
-                continue
-            else:
-                ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
-
-        # set material
-        ob.data.materials.append(new_material)
-        # set location
+            for uvmap in uv_map_list:
+                if uvmap == bake_uvmap_name:
+                    continue
+                else:
+                    ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
+            # set material
+            ob.data.materials.append(new_material)
+    if options["do_center"]:
         bpy.context.object.location = [0, 0, 0]
-
-    export_selection(publish_path, asset_name)
+    if options["do_export"]:
+        export_selection(publish_path, asset_name)
