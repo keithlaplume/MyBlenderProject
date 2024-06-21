@@ -76,7 +76,7 @@ class Publish(bpy.types.Operator):
                    "do_center": publish_tool.do_center,
                    }
 
-        bake_list = ["diffuse", "emit", "roughness", "normal"]
+        bake_list = ["diffuse", "metalness", "emit", "roughness", "normal"]
         selection = bpy.context.selected_objects
         export_selection_to_asset.main(selection, publish_tool.publish_path, publish_tool.asset_name, bake_list, options)
         return {'FINISHED'}
