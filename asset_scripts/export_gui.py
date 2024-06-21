@@ -4,6 +4,7 @@ from importlib import reload
 
 sys.path.append("C:/Users/Keith/PycharmProjects/MyBlenderProject/asset_scripts/")
 import export_selection_to_asset
+
 reload(export_selection_to_asset)
 
 from bpy.props import (StringProperty,
@@ -123,9 +124,22 @@ class Publish(bpy.types.Operator):
                    "do_center": publish_tool.do_center,
                    }
 
-        bake_list = ["diffuse", "metallic", "emit", "roughness", "normal"]
+        bake_list = []
+
+        if publish_tool.diffuse:
+            bake_list.append("diffuse")
+        if publish_tool.metallic:
+            bake_list.append("metallic")
+        if publish_tool.emit:
+            bake_list.append("emit")
+        if publish_tool.roughness:
+            bake_list.append("roughness")
+        if publish_tool.normal:
+            bake_list.append("normal")
+
         selection = bpy.context.selected_objects
-        export_selection_to_asset.main(selection, publish_tool.publish_path, publish_tool.asset_name, bake_list, options)
+        export_selection_to_asset.main(selection, publish_tool.publish_path, publish_tool.asset_name, bake_list,
+                                       options)
         return {'FINISHED'}
 
 
