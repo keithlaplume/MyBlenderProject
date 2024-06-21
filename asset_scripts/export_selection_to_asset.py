@@ -46,8 +46,8 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
     for bake_type in bake_list:
         new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
-        path = os.path.join(publish_path, bake_type + ".jpg")
-        img_format = 'JPEG'
+        path = os.path.join(publish_path, bake_type + ".png")
+        img_format = 'PNG'
         emit_node = None
         non_obj_list = []
 
@@ -121,7 +121,7 @@ def create_material_from_folder(folder, bake_list):
 
     for bake_type in bake_list:
         tex_node = mat_nodes.new("ShaderNodeTexImage")
-        tex_node.image = bpy.data.images.load(os.path.join(folder, bake_type + ".jpg"))
+        tex_node.image = bpy.data.images.load(os.path.join(folder, bake_type + ".png"))
         if bake_type == "diffuse" or bake_type == "emit":
             tex_node.image.colorspace_settings.name = "sRGB"
         else:
