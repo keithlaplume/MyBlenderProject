@@ -3,6 +3,18 @@ import os
 
 bake_uvmap_name = "UVMap_Bake"
 
+def bake_and_save_image(baked_image, path, img_format, bake_type, size, final_size):
+    print(f"BAKING {bake_type}")
+    bpy.ops.object.bake(type=bake_type.upper())
+
+    if size != final_size:
+        baked_image.scale(final_size, final_size)
+
+    # write image
+    baked_image.filepath_raw = path
+    baked_image.file_format = img_format
+    baked_image.save()
+
 
 def create_baking_uvs(selection):
     for ob in selection:
@@ -15,7 +27,7 @@ def create_baking_uvs(selection):
     bpy.ops.object.editmode_toggle()
 
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=1):
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1):
     #get render settings
     render_engine = bpy.context.scene.render.engine
     samples = bpy.context.scene.cycles.samples
@@ -30,43 +42,41 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
     bpy.context.scene.render.bake.use_pass_indirect = False
     bpy.context.scene.render.bake.margin = 0
 
+    size = final_size * oversample
+
     for bake_type in bake_list:
-        size = final_size * oversample
-        new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
-        non_obj_list = []
-        for ob in selection:
-            if ob.type == 'MESH':
-                for material in ob.material_slots:
-                    node_tree = material.material.node_tree
-                    nodes = node_tree.nodes
-                    tex_node = nodes.new("ShaderNodeTexImage")
-                    tex_node.image = new_image
-                    if bake_type == "diffuse" or bake_type == "emit":
-                        new_image.colorspace_settings.name = "sRGB"
-                    else:
-                        new_image.colorspace_settings.name = "Non-Color"
-                    uv_node = nodes.new("ShaderNodeUVMap")
-                    uv_node.uv_map = bake_uvmap_name
-                    node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
-                    nodes.active = tex_node
-            else:
-                non_obj_list.append(ob)
-                ob.select_set(False)
 
-        print(f"BAKING {bake_type}")
-        bpy.ops.object.bake(type=bake_type.upper())
+        if bake_type == "metalness":
+            path = os.path.join(publish_path, asset_name, bake_type + ".jpg")
+            img_format = 'JPEG'
+            bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
+        else:
+            new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
+            non_obj_list = []
+            for ob in selection:
+                if ob.type == 'MESH':
+                    for material in ob.material_slots:
+                        node_tree = material.material.node_tree
+                        nodes = node_tree.nodes
+                        tex_node = nodes.new("ShaderNodeTexImage")
+                        tex_node.image = new_image
+                        if bake_type == "diffuse" or bake_type == "emit":
+                            new_image.colorspace_settings.name = "sRGB"
+                        else:
+                            new_image.colorspace_settings.name = "Non-Color"
+                        uv_node = nodes.new("ShaderNodeUVMap")
+                        uv_node.uv_map = bake_uvmap_name
+                        node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
+                        nodes.active = tex_node
+                else:
+                    non_obj_list.append(ob)
+                    ob.select_set(False)
 
-        if size != final_size:
-            new_image.scale(final_size, final_size)
+        bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
 
-        # write image
-        new_image.filepath_raw = os.path.join(publish_path, asset_name, bake_type + ".jpg")
-        new_image.file_format = 'JPEG'
-        new_image.save()
-
-        #add non objects back into selection
-        for ob in non_obj_list:
-            ob.select_set(True)
+    #add non objects back into selection
+    for ob in non_obj_list:
+        ob.select_set(True)
 
     #reset render settings
     bpy.context.scene.render.engine = render_engine
