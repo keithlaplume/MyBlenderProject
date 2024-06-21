@@ -52,9 +52,12 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
             else:
                 non_obj_list.append(ob)
                 ob.select_set(False)
+
         print(f"BAKING {bake_type}")
         bpy.ops.object.bake(type=bake_type.upper())
-        new_image.scale(final_size, final_size)
+
+        if size != final_size:
+            new_image.scale(final_size, final_size)
 
         # write image
         new_image.filepath_raw = os.path.join(publish_path, asset_name, bake_type + ".jpg")
