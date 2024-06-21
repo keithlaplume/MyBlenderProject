@@ -45,34 +45,60 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
     size = final_size * oversample
 
     for bake_type in bake_list:
+        new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
+        path = os.path.join(publish_path, asset_name, bake_type + ".jpg")
+        img_format = 'JPEG'
+        emit_node = None
+        non_obj_list = []
+
+        for ob in selection:
+            if ob.type == 'MESH':
+                for material in ob.material_slots:
+                    node_tree = material.material.node_tree
+                    nodes = node_tree.nodes
+                    tex_node = nodes.new("ShaderNodeTexImage")
+                    tex_node.image = new_image
+                    if bake_type == "diffuse" or bake_type == "emit":
+                        new_image.colorspace_settings.name = "sRGB"
+                    else:
+                        new_image.colorspace_settings.name = "Non-Color"
+                    uv_node = nodes.new("ShaderNodeUVMap")
+                    uv_node.uv_map = bake_uvmap_name
+                    node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
+                    nodes.active = tex_node
+                    if bake_type == "metalness":
+                        bsdf = node_tree.nodes["Principled BSDF"]
+                        try:
+                            metalness_node = bsdf.inputs[1].links[0].from_socket.node
+                        except:
+                            metalness_node = nodes.new("ShaderNodeValue")
+                            metalness_node.outputs[0].default_value = bsdf.inputs[1].default_value
+
+                        # save emit connection or value
+                        try:
+                            emit_node = bsdf.inputs[26].links[0].from_socket.node
+                        except:
+                            emit_node = nodes.new("ShaderNodeRGB")
+                            emit_node.outputs[0].default_value = bsdf.inputs[26].default_value
+
+                        # connect metalness node to emit input
+                        node_tree.links.new(metalness_node.outputs[0], bsdf.inputs[26])
+                        # save emit connection
+                        # connect metalness to emit
+
+            else:
+                non_obj_list.append(ob)
+                ob.select_set(False)
 
         if bake_type == "metalness":
-            path = os.path.join(publish_path, asset_name, bake_type + ".jpg")
-            img_format = 'JPEG'
-            bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
+            bake_and_save_image(new_image, path, img_format, "emit", size, final_size)
         else:
-            new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
-            non_obj_list = []
-            for ob in selection:
-                if ob.type == 'MESH':
-                    for material in ob.material_slots:
-                        node_tree = material.material.node_tree
-                        nodes = node_tree.nodes
-                        tex_node = nodes.new("ShaderNodeTexImage")
-                        tex_node.image = new_image
-                        if bake_type == "diffuse" or bake_type == "emit":
-                            new_image.colorspace_settings.name = "sRGB"
-                        else:
-                            new_image.colorspace_settings.name = "Non-Color"
-                        uv_node = nodes.new("ShaderNodeUVMap")
-                        uv_node.uv_map = bake_uvmap_name
-                        node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
-                        nodes.active = tex_node
-                else:
-                    non_obj_list.append(ob)
-                    ob.select_set(False)
+            bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
 
-        bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
+        # reset from metalness bake
+        # connect saved emit to emit
+        if bake_type == "metalness":
+            node_tree.links.new(emit_node.outputs[0], bsdf.inputs[26])
 
     #add non objects back into selection
     for ob in non_obj_list:
@@ -91,7 +117,7 @@ def create_material_from_folder(folder, bake_list):
     new_mat.use_nodes = True
     mat_nodes = new_mat.node_tree.nodes
     bsdf = mat_nodes["Principled BSDF"]
-    text_to_input = {"diffuse": 0, "roughness": 2, "normal": 5, "emit": 26}
+    text_to_input = {"diffuse": 0, "metalness": 1, "roughness": 2, "normal": 5, "emit": 26}
 
     for bake_type in bake_list:
         tex_node = mat_nodes.new("ShaderNodeTexImage")
