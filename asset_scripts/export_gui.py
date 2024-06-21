@@ -33,6 +33,28 @@ class MyProperties(PropertyGroup):
         default=bpy.context.active_object.name,
         maxlen=1024,
     )
+    prefix: StringProperty(
+        name="Prefix",
+        description="Prefix for Asset Name",
+        default="",
+        maxlen=1024,
+    )
+    postfix: StringProperty(
+        name="Postfix",
+        description="Prefix for Asset Name",
+        default="",
+        maxlen=1024,
+    )
+    include_prefix: BoolProperty(
+        name="Include Prefix in folder name",
+        description="Bool property",
+        default=False
+    )
+    include_postfix: BoolProperty(
+        name="Include Postfix in folder name",
+        description="Bool property",
+        default=False
+    )
     do_new_uvs: BoolProperty(
         name="Create New UVs for Baking",
         description="Bool property",
@@ -40,6 +62,31 @@ class MyProperties(PropertyGroup):
     )
     do_bake_textures: BoolProperty(
         name="Bake Textures to new UVs",
+        description="Bool property",
+        default=True
+    )
+    diffuse: BoolProperty(
+        name="Diffuse",
+        description="Bool property",
+        default=True
+    )
+    metallic: BoolProperty(
+        name="Metallic",
+        description="Bool property",
+        default=True
+    )
+    emit: BoolProperty(
+        name="Emit",
+        description="Bool property",
+        default=True
+    )
+    roughness: BoolProperty(
+        name="Roughness",
+        description="Bool property",
+        default=True
+    )
+    normal: BoolProperty(
+        name="Normal",
         description="Bool property",
         default=True
     )
@@ -76,7 +123,7 @@ class Publish(bpy.types.Operator):
                    "do_center": publish_tool.do_center,
                    }
 
-        bake_list = ["diffuse", "metalness", "emit", "roughness", "normal"]
+        bake_list = ["diffuse", "metallic", "emit", "roughness", "normal"]
         selection = bpy.context.selected_objects
         export_selection_to_asset.main(selection, publish_tool.publish_path, publish_tool.asset_name, bake_list, options)
         return {'FINISHED'}
@@ -118,29 +165,45 @@ class OBJECT_PT_CustomPanel(Panel):
 
         col1 = layout.column(align=True)
         col1.label(text="Asset Name:")
-        row = col1.row(align=True)
-        row.prop(publish_tool, "asset_name", text="")
-        row.operator("object.update_name")
+        row1 = col1.row(align=True)
+        row1.prop(publish_tool, "asset_name", text="")
+        row1.operator("object.update_name")
+        row2 = col1.row(align=True)
+        row2.prop(publish_tool, "prefix", text="Prefix")
+        row2.prop(publish_tool, "include_prefix")
+        row3 = col1.row(align=True)
+        row3.prop(publish_tool, "postfix", text="Postfix")
+        row3.prop(publish_tool, "include_postfix")
 
         col3 = layout.column(align=True)
         col3.prop(publish_tool, "do_new_uvs")
 
         col4 = layout.column(align=True)
         col4.prop(publish_tool, "do_bake_textures")
+        col5 = layout.column(align=True)
+        col5.prop(publish_tool, "diffuse")
+        col5.prop(publish_tool, "metallic")
+        col5.prop(publish_tool, "emit")
+        col5.prop(publish_tool, "roughness")
+        col5.prop(publish_tool, "normal")
         if publish_tool.do_new_uvs:
             col4.active = True
         else:
             col4.active = False
-
-        col5 = layout.column(align=True)
-        col5.prop(publish_tool, "do_export")
+        if publish_tool.do_bake_textures and publish_tool.do_new_uvs:
+            col5.active = True
+        else:
+            col5.active = False
 
         col6 = layout.column(align=True)
-        col6.prop(publish_tool, "do_center")
+        col6.prop(publish_tool, "do_export")
+
+        col7 = layout.column(align=True)
+        col7.prop(publish_tool, "do_center")
         if publish_tool.do_export:
-            col6.active = True
+            col7.active = True
         else:
-            col6.active = False
+            col7.active = False
 
         row = layout.row()
         row.scale_y = 3.0

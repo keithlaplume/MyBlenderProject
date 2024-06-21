@@ -66,13 +66,13 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                     uv_node.uv_map = bake_uvmap_name
                     node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
                     nodes.active = tex_node
-                    if bake_type == "metalness":
+                    if bake_type == "metallic":
                         bsdf = node_tree.nodes["Principled BSDF"]
                         try:
-                            metalness_node = bsdf.inputs[1].links[0].from_socket.node
+                            metallic_node = bsdf.inputs[1].links[0].from_socket.node
                         except:
-                            metalness_node = nodes.new("ShaderNodeValue")
-                            metalness_node.outputs[0].default_value = bsdf.inputs[1].default_value
+                            metallic_node = nodes.new("ShaderNodeValue")
+                            metallic_node.outputs[0].default_value = bsdf.inputs[1].default_value
 
                         # save emit connection or value
                         try:
@@ -81,23 +81,23 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                             emit_node = nodes.new("ShaderNodeRGB")
                             emit_node.outputs[0].default_value = bsdf.inputs[26].default_value
 
-                        # connect metalness node to emit input
-                        node_tree.links.new(metalness_node.outputs[0], bsdf.inputs[26])
+                        # connect metallic node to emit input
+                        node_tree.links.new(metallic_node.outputs[0], bsdf.inputs[26])
                         # save emit connection
-                        # connect metalness to emit
+                        # connect metallic to emit
 
             else:
                 non_obj_list.append(ob)
                 ob.select_set(False)
 
-        if bake_type == "metalness":
+        if bake_type == "metallic":
             bake_and_save_image(new_image, path, img_format, "emit", size, final_size)
         else:
             bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
 
-        # reset from metalness bake
+        # reset from metallic bake
         # connect saved emit to emit
-        if bake_type == "metalness":
+        if bake_type == "metallic":
             node_tree.links.new(emit_node.outputs[0], bsdf.inputs[26])
 
     #add non objects back into selection
@@ -117,7 +117,7 @@ def create_material_from_folder(folder, bake_list):
     new_mat.use_nodes = True
     mat_nodes = new_mat.node_tree.nodes
     bsdf = mat_nodes["Principled BSDF"]
-    text_to_input = {"diffuse": 0, "metalness": 1, "roughness": 2, "normal": 5, "emit": 26}
+    text_to_input = {"diffuse": 0, "metallic": 1, "roughness": 2, "normal": 5, "emit": 26}
 
     for bake_type in bake_list:
         tex_node = mat_nodes.new("ShaderNodeTexImage")
