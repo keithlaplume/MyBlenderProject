@@ -1,5 +1,6 @@
 import bpy
 import sys
+import os
 from importlib import reload
 
 sys.path.append("C:/Users/Keith/PycharmProjects/MyBlenderProject/asset_scripts/")
@@ -138,8 +139,18 @@ class Publish(bpy.types.Operator):
             bake_list.append("normal")
 
         selection = bpy.context.selected_objects
-        export_selection_to_asset.main(selection, publish_tool.publish_path, publish_tool.asset_name, bake_list,
-                                       options)
+
+        asset_publish_path = publish_tool.asset_name
+        if publish_tool.include_prefix:
+            asset_publish_path = publish_tool.prefix + asset_publish_path
+        if publish_tool.include_postfix:
+            asset_publish_path = asset_publish_path + publish_tool.postfix
+        asset_publish_path = os.path.join(publish_tool.publish_path, asset_publish_path)
+
+        export_selection_to_asset.main(selection, asset_publish_path,
+                                       f"{publish_tool.prefix}{publish_tool.asset_name}{publish_tool.postfix}",
+                                       bake_list, options)
+
         return {'FINISHED'}
 
 

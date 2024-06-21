@@ -46,7 +46,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
     for bake_type in bake_list:
         new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
-        path = os.path.join(publish_path, asset_name, bake_type + ".jpg")
+        path = os.path.join(publish_path, bake_type + ".jpg")
         img_format = 'JPEG'
         emit_node = None
         non_obj_list = []
@@ -140,10 +140,9 @@ def export_selection(publish_path, asset_name):
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.object.delete(use_global=False, confirm=False)
     current_blend_file = bpy.data.filepath
-    asset_full = os.path.normpath(os.path.join(publish_path, asset_name))
-    if not os.path.exists(asset_full):
-        os.mkdir(asset_full)
-    export_blend_path_full = os.path.normpath(os.path.join(publish_path, asset_name, asset_name + ".blend"))
+    if not os.path.exists(publish_path):
+        os.mkdir(publish_path)
+    export_blend_path_full = os.path.normpath(os.path.join(publish_path, asset_name + ".blend"))
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.wm.save_as_mainfile(filepath=export_blend_path_full)
     if current_blend_file.endswith(".blend"):
@@ -164,7 +163,7 @@ def main(selection, publish_path, asset_name, bake_list, options):
         bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
         bpy.ops.object.duplicate()
         selection = bpy.context.selected_objects
-        new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
+        new_material = create_material_from_folder(publish_path, bake_list)
         for ob in selection:
             if ob.type == 'MESH':
                 # clean material
