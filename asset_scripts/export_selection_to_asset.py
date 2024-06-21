@@ -6,58 +6,71 @@ bake_uvmap_name = "UVMap_Bake"
 
 def create_baking_uvs(selection):
     for ob in selection:
-        bake_uvmap = ob.data.uv_layers.new(name=bake_uvmap_name)
-        bake_uvmap.active = True
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.mesh.select_all(action='SELECT')
-        bpy.ops.uv.smart_project(island_margin=0.00001)
-        bpy.ops.object.editmode_toggle()
+        if ob.type == 'MESH':
+            bake_uvmap = ob.data.uv_layers.new(name=bake_uvmap_name)
+            bake_uvmap.active = True
+    bpy.ops.object.editmode_toggle()
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.smart_project(island_margin=0.00001)
+    bpy.ops.object.editmode_toggle()
 
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=1):
     #get render settings
     render_engine = bpy.context.scene.render.engine
     samples = bpy.context.scene.cycles.samples
     direct_pass = bpy.context.scene.render.bake.use_pass_direct
     indirect_pass = bpy.context.scene.render.bake.use_pass_indirect
+    margin = bpy.context.scene.render.bake.margin
 
     #set render settings
     bpy.context.scene.render.engine = 'CYCLES'
     bpy.context.scene.cycles.samples = 1
     bpy.context.scene.render.bake.use_pass_direct = False
     bpy.context.scene.render.bake.use_pass_indirect = False
+    bpy.context.scene.render.bake.margin = 0
 
     for bake_type in bake_list:
         size = final_size * oversample
         new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
+        non_obj_list = []
         for ob in selection:
-            for material in ob.material_slots:
-                node_tree = material.material.node_tree
-                nodes = node_tree.nodes
-                tex_node = nodes.new("ShaderNodeTexImage")
-                tex_node.image = new_image
-                if bake_type == "diffuse" or bake_type == "emit":
-                    new_image.colorspace_settings.name = "sRGB"
-                else:
-                    new_image.colorspace_settings.name = "Non-Color"
-                uv_node = nodes.new("ShaderNodeUVMap")
-                uv_node.uv_map = bake_uvmap_name
-                node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
-                nodes.active = tex_node
+            if ob.type == 'MESH':
+                for material in ob.material_slots:
+                    node_tree = material.material.node_tree
+                    nodes = node_tree.nodes
+                    tex_node = nodes.new("ShaderNodeTexImage")
+                    tex_node.image = new_image
+                    if bake_type == "diffuse" or bake_type == "emit":
+                        new_image.colorspace_settings.name = "sRGB"
+                    else:
+                        new_image.colorspace_settings.name = "Non-Color"
+                    uv_node = nodes.new("ShaderNodeUVMap")
+                    uv_node.uv_map = bake_uvmap_name
+                    node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
+                    nodes.active = tex_node
+            else:
+                non_obj_list.append(ob)
+                ob.select_set(False)
+        print(f"BAKING {bake_type}")
+        bpy.ops.object.bake(type=bake_type.upper())
+        new_image.scale(final_size, final_size)
 
-            bpy.ops.object.bake(type=bake_type.upper())
-            new_image.scale(final_size, final_size)
+        # write image
+        new_image.filepath_raw = os.path.join(publish_path, asset_name, bake_type + ".jpg")
+        new_image.file_format = 'JPEG'
+        new_image.save()
 
-            # write image
-            new_image.filepath_raw = os.path.join(publish_path, asset_name, bake_type + ".jpg")
-            new_image.file_format = 'JPEG'
-            new_image.save()
+        #add non objects back into selection
+        for ob in non_obj_list:
+            ob.select_set(True)
 
     #reset render settings
     bpy.context.scene.render.engine = render_engine
     bpy.context.scene.cycles.samples = samples
     bpy.context.scene.render.bake.use_pass_direct = direct_pass
     bpy.context.scene.render.bake.use_pass_indirect = indirect_pass
+    bpy.context.scene.render.bake.margin = margin
 
 
 def create_material_from_folder(folder, bake_list):
@@ -114,23 +127,22 @@ def main(selection, publish_path, asset_name, bake_list, options):
         selection = bpy.context.selected_objects
         new_material = create_material_from_folder(os.path.join(publish_path, asset_name), bake_list)
         for ob in selection:
-            # clean material
-            for i in range(len(ob.material_slots)):
-                bpy.context.object.active_material_index = i
-                bpy.ops.object.material_slot_remove()
-            # clean uv maps
-            uv_map_list = []
-            for uvmap in ob.data.uv_layers:
-                print(uvmap.name)
-                uv_map_list.append(uvmap.name)
+            if ob.type == 'MESH':
+                # clean material
+                ob.data.materials.clear()
+                # clean uv maps
+                uv_map_list = []
+                for uvmap in ob.data.uv_layers:
+                    print(uvmap.name)
+                    uv_map_list.append(uvmap.name)
 
-            for uvmap in uv_map_list:
-                if uvmap == bake_uvmap_name:
-                    continue
-                else:
-                    ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
-            # set material
-            ob.data.materials.append(new_material)
+                for uvmap in uv_map_list:
+                    if uvmap == bake_uvmap_name:
+                        continue
+                    else:
+                        ob.data.uv_layers.remove(ob.data.uv_layers[uvmap])
+                # set material
+                ob.data.materials.append(new_material)
     if options["do_center"]:
         bpy.context.object.location = [0, 0, 0]
     if options["do_export"]:
