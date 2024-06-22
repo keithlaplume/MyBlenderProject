@@ -29,7 +29,7 @@ def pre_process_transparent(node_tree):
 
 def bake_and_save_image(baked_image, path, img_format, bake_type, size, final_size):
     print(f"BAKING {bake_type}")
-    if bake_type == "metallic":
+    if bake_type == "metallic" or bake_type == "alpha":
         bake_type = "emit"
     bpy.ops.object.bake(type=bake_type.upper())
 
@@ -104,6 +104,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                         node_tree.links.new(uv_node.outputs[0], tex_node.inputs[0])
                         nodes.active = tex_node
 
+                        #bake out metallic through the emission
                         # connect metallic to emit
                         if bake_type == "metallic":
                             bsdf = node_tree.nodes["Principled BSDF"]
@@ -124,6 +125,28 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
                             # connect metallic node to emit input
                             node_tree.links.new(metallic_node.outputs[0], bsdf.inputs[26])
+
+                            # bake out metallic through the emission
+                            # connect metallic to emit
+                            if bake_type == "alpha":
+                                bsdf = node_tree.nodes["Principled BSDF"]
+                                # save emit connection or value
+                                try:
+                                    emit_node = bsdf.inputs[26].links[0].from_socket.node
+                                except:
+                                    emit_node = nodes.new("ShaderNodeRGB")
+                                    emit_node.outputs[0].default_value = bsdf.inputs[26].default_value
+
+                                emit_nodes[material.name] = emit_node
+
+                                try:
+                                    alpha_node = bsdf.inputs[4].links[0].from_socket.node
+                                except:
+                                    alpha_node = nodes.new("ShaderNodeValue")
+                                    alpha_node.outputs[0].default_value = bsdf.inputs[4].default_value
+
+                                # connect metallic node to emit input
+                                node_tree.links.new(alpha_node.outputs[0], bsdf.inputs[26])
 
                         prepared_materials.append(material.name)
 
