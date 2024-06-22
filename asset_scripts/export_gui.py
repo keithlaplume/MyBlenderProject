@@ -92,6 +92,11 @@ class MyProperties(PropertyGroup):
         description="Bool property",
         default=True
     )
+    alpha: BoolProperty(
+        name="Alpha",
+        description="Bool property",
+        default=True
+    )
     do_export: BoolProperty(
         name="Export Selection as Seperate Blend File",
         description="Bool property",
@@ -137,6 +142,8 @@ class Publish(bpy.types.Operator):
             bake_list.append("roughness")
         if publish_tool.normal:
             bake_list.append("normal")
+        if publish_tool.alpha:
+            bake_list.append("alpha")
 
         selection = bpy.context.selected_objects
 
@@ -211,6 +218,7 @@ class OBJECT_PT_CustomPanel(Panel):
         col5.prop(publish_tool, "emit")
         col5.prop(publish_tool, "roughness")
         col5.prop(publish_tool, "normal")
+        col5.prop(publish_tool, "alpha")
         if publish_tool.do_new_uvs:
             col4.active = True
         else:
