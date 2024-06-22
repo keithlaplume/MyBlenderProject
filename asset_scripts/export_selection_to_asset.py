@@ -13,7 +13,7 @@ def pre_process_transparent(node_tree):
         metalness_value = node_tree.nodes.new("ShaderNodeValue")
         metalness_value.outputs[0].default_value = 0.9
         alpha_value = node_tree.nodes.new("ShaderNodeValue")
-        alpha_value.outputs[0].default_value = 0.7
+        alpha_value.outputs[0].default_value = 0.8
         emit_color = node_tree.nodes.new("ShaderNodeRGB")
         emit_color.outputs[0].default_value = (1, 0.928203, 0.333327, 1)
         emit_strength = node_tree.nodes.new("ShaderNodeValue")
