@@ -205,7 +205,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
 
 def create_material_from_folder(folder, bake_list):
-    new_mat = bpy.data.materials.new(os.path.dirname(folder))
+    new_mat = bpy.data.materials.new(os.path.basename(os.path.dirname(folder)))
     new_mat.use_nodes = True
     mat_nodes = new_mat.node_tree.nodes
     bsdf = mat_nodes["Principled BSDF"]
