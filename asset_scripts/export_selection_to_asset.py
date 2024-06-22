@@ -11,7 +11,7 @@ def pre_process_transparent(node_tree):
     if transparent:
         print("Found transparent")
         metalness_value = node_tree.nodes.new("ShaderNodeValue")
-        metalness_value.outputs[0].default_value = 0.7
+        metalness_value.outputs[0].default_value = 0.9
         alpha_value = node_tree.nodes.new("ShaderNodeValue")
         alpha_value.outputs[0].default_value = 0.7
         emit_color = node_tree.nodes.new("ShaderNodeRGB")
@@ -53,7 +53,7 @@ def create_baking_uvs(selection):
     bpy.ops.object.editmode_toggle()
 
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1):
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=4096, oversample=2):
     #get render settings
     render_engine = bpy.context.scene.render.engine
     samples = bpy.context.scene.cycles.samples
