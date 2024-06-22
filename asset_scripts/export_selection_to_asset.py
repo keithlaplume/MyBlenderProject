@@ -3,6 +3,30 @@ import os
 
 bake_uvmap_name = "UVMap_Bake"
 
+def pre_process_transparent(node_tree):
+    try:
+        transparent = node_tree.nodes["Transparent BSDF"]
+    except:
+        transparent = None
+    if transparent:
+        print("Found transparent")
+        metalness_value = node_tree.nodes.new("ShaderNodeValue")
+        metalness_value.outputs[0].default_value = 0.5
+        alpha_value = node_tree.nodes.new("ShaderNodeValue")
+        alpha_value.outputs[0].default_value = 0.3
+        emit_color = node_tree.nodes.new("ShaderNodeRGB")
+        emit_color.outputs[0].default_value = (1, 0.928203, 0.333327, 1)
+        emit_strength = node_tree.nodes.new("ShaderNodeValue")
+        emit_strength.outputs[0].default_value = 0.1
+        principled = node_tree.nodes["Principled BSDF"]
+        mat_out = node_tree.nodes["Material Output"]
+
+        node_tree.links.new(principled.outputs[0], mat_out.inputs[0])
+        node_tree.links.new(metalness_value.outputs[0], principled.inputs[1])
+        node_tree.links.new(alpha_value.outputs[0], principled.inputs[4])
+        node_tree.links.new(emit_color.outputs[0], principled.inputs[26])
+        node_tree.links.new(emit_strength.outputs[0], principled.inputs[27])
+
 def bake_and_save_image(baked_image, path, img_format, bake_type, size, final_size):
     print(f"BAKING {bake_type}")
     if bake_type == "metallic":
@@ -42,7 +66,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
     bpy.context.scene.cycles.samples = 1
     bpy.context.scene.render.bake.use_pass_direct = False
     bpy.context.scene.render.bake.use_pass_indirect = False
-    bpy.context.scene.render.bake.margin = 0
+    bpy.context.scene.render.bake.margin = 1
 
     size = final_size * oversample
 
@@ -54,6 +78,15 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
         prepared_materials = []
         non_obj_list = []
 
+        # disconnect transparent bdsf
+        for ob in selection:
+            for material in ob.material_slots:
+                if material.name not in prepared_materials:
+                    node_tree = material.material.node_tree
+                    pre_process_transparent(node_tree)
+                    prepared_materials.append(material.name)
+
+        prepared_materials = []
         for ob in selection:
             if ob.type == 'MESH':
                 for material in ob.material_slots:
@@ -92,7 +125,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                             # connect metallic node to emit input
                             node_tree.links.new(metallic_node.outputs[0], bsdf.inputs[26])
 
-                            prepared_materials.append(material.name)
+                        prepared_materials.append(material.name)
 
             else:
                 non_obj_list.append(ob)
@@ -144,6 +177,9 @@ def create_material_from_folder(folder, bake_list):
             new_mat.node_tree.links.new(normal_node.outputs[0], bsdf.inputs[text_to_input[bake_type]])
         else:
             new_mat.node_tree.links.new(tex_node.outputs[0], bsdf.inputs[text_to_input[bake_type]])
+
+        bsdf.inputs[27].default_value = 1
+
 
     return new_mat
 
