@@ -98,7 +98,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                 non_obj_list.append(ob)
                 ob.select_set(False)
 
-        #bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
+        bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
 
         # reset from metallic bake
         if bake_type == "metallic":
