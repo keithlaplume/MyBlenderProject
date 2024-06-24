@@ -10,12 +10,6 @@ bake_type_to_input = {"Diffuse": "Base Color",
                       "Normal": "Normal",
                       "Alpha": "Alpha"}
 
-def find_node(node_tree, node_name):
-    try:
-        return node_tree.nodes[node_name]
-    except KeyError:
-        return None
-
 def create_value_node(node_tree, default_value):
     value_node = node_tree.nodes.new("ShaderNodeValue")
     value_node.outputs.get("Value").default_value = default_value
@@ -27,7 +21,7 @@ def create_rgb_node(node_tree, default_value):
     return rgb_node
 
 def pre_process_transparent(node_tree):
-    transparent = find_node(node_tree, "Transparent BSDF")
+    transparent = node_tree.nodes.get("Transparent BSDF")
     if transparent:
         print("Found material with transparency")
         metallic_value = create_value_node(node_tree, 0.9)
@@ -35,8 +29,8 @@ def pre_process_transparent(node_tree):
         emit_color = create_rgb_node(node_tree, (1, 0.928203, 0.333327, 1))
         emit_strength = create_value_node(node_tree, 0.1)
 
-        principled = find_node(node_tree, "Principled BSDF")
-        mat_out = find_node(node_tree, "Material Output")
+        principled = node_tree.nodes.get("Principled BSDF")
+        mat_out = node_tree.nodes.get("Material Output")
 
         if principled and mat_out:
             node_tree.links.new(principled.outputs.get("BSDF"), mat_out.inputs.get("Surface"))
@@ -82,7 +76,7 @@ def reset_material_after_non_native_bake(emit_nodes):
 def prepare_non_native_bake_types(node_tree, bake_type):
     emit_nodes = {}
     nodes = node_tree.nodes
-    principled = find_node(node_tree, "Principled BSDF")
+    principled = node_tree.nodes.get("Principled BSDF")
 
     if principled:
         try:
