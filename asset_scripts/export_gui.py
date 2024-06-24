@@ -133,17 +133,17 @@ class Publish(bpy.types.Operator):
         bake_list = []
 
         if publish_tool.diffuse:
-            bake_list.append("diffuse")
+            bake_list.append("Diffuse")
         if publish_tool.metallic:
-            bake_list.append("metallic")
+            bake_list.append("Metallic")
         if publish_tool.emit:
-            bake_list.append("emit")
+            bake_list.append("Emit")
         if publish_tool.roughness:
-            bake_list.append("roughness")
+            bake_list.append("Roughness")
         if publish_tool.normal:
-            bake_list.append("normal")
+            bake_list.append("Normal")
         if publish_tool.alpha:
-            bake_list.append("alpha")
+            bake_list.append("Alpha")
 
         selection = bpy.context.selected_objects
 
