@@ -50,7 +50,7 @@ def pre_process_transparent(node_tree):
 def bake_and_save_image(baked_image, path, img_format, bake_type, size, final_size):
     print(f"BAKING {bake_type}")
     if bake_type in non_native_bake_types:
-        bake_type = "emit"
+        bake_type = "Emit"
     bpy.ops.object.bake(type=bake_type.upper())
 
     if size != final_size:
@@ -71,13 +71,13 @@ def create_baking_uvs(selection):
     bpy.ops.object.editmode_toggle()
 
 
-def reset_material_after_non_native_bake(node_tree, bake_type, emit_nodes):
+def reset_material_after_non_native_bake(emit_nodes):
         print("Preparing to reset")
-        principled = node_tree.nodes.get("Principled BSDF")
-        if principled:
-            for material_name, emit_node in emit_nodes.items():
-                node_tree.links.new(emit_node[0].outputs[0], principled.inputs.get("Emission Color"))
-                node_tree.links.new(emit_node[1].outputs[0], principled.inputs.get("Emission Strength"))
+        for material_name, emit_node in emit_nodes.items():
+            node_tree = bpy.data.materials[material_name].node_tree
+            principled = node_tree.nodes.get("Principled BSDF")
+            node_tree.links.new(emit_node[0].outputs[0], principled.inputs.get("Emission Color"))
+            node_tree.links.new(emit_node[1].outputs[0], principled.inputs.get("Emission Strength"))
 
 def prepare_non_native_bake_types(node_tree, bake_type):
     emit_nodes = {}
@@ -187,7 +187,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                 nodes = node_tree.nodes
                 tex_node = nodes.new("ShaderNodeTexImage")
                 tex_node.image = new_image
-                if bake_type in ["diffuse", "emit"]:
+                if bake_type in ["Diffuse", "Emit"]:
                     new_image.colorspace_settings.name = "sRGB"
                 else:
                     new_image.colorspace_settings.name = "Non-Color"
@@ -229,14 +229,14 @@ def create_material_from_folder(folder, bake_list):
     for bake_type in bake_list:
         tex_node = mat_nodes.new("ShaderNodeTexImage")
         tex_node.image = bpy.data.images.load(os.path.join(folder, bake_type + ".png"))
-        if bake_type in ["diffuse", "emit"]:
+        if bake_type in ["Diffuse", "Emit"]:
             tex_node.image.colorspace_settings.name = "sRGB"
         else:
             tex_node.image.colorspace_settings.name = "Non-Color"
 
         if bake_type == "Normal":
             normal_node = new_mat.node_tree.nodes.new("ShaderNodeNormalMap")
-            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), normal_node.get("Color"))
+            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), normal_node.inputs.get("Color"))
             new_mat.node_tree.links.new(normal_node.outputs.get("Normal"), principled.inputs.get("Normal"))
         else:
             new_mat.node_tree.links.new(tex_node.outputs.get("Color"), principled.inputs.get(bake_type_to_input[bake_type]))
