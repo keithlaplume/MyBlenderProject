@@ -106,23 +106,137 @@ def prepare_non_native_bake_types(node_tree, bake_type):
 
     return emit_nodes
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1):
-    # Store original render settings
+def get_render_settings():
     render_settings = {
         "engine": bpy.context.scene.render.engine,
         "samples": bpy.context.scene.cycles.samples,
         "direct_pass": bpy.context.scene.render.bake.use_pass_direct,
         "indirect_pass": bpy.context.scene.render.bake.use_pass_indirect,
         "margin": bpy.context.scene.render.bake.margin,
-        "clear_image": bpy.context.scene.render.bake.use_clear
+        "clear_image": bpy.context.scene.render.bake.use_clear,
+        "selected_to_active": bpy.context.scene.render.bake.use_selected_to_active,
+        "cage_extrusion": bpy.context.scene.render.bake.cage_extrusion
     }
+    return render_settings
+
+def set_render_settings(engine, samples, direct, indirect, margin, clear, selected_to_active, cage_extrusion):
+    bpy.context.scene.render.engine = engine
+    bpy.context.scene.cycles.samples = samples
+    bpy.context.scene.render.bake.use_pass_direct = direct
+    bpy.context.scene.render.bake.use_pass_indirect = indirect
+    bpy.context.scene.render.bake.margin = margin
+    bpy.context.scene.render.bake.use_clear = clear
+    bpy.context.scene.render.bake.use_selected_to_active = selected_to_active
+    bpy.context.scene.render.bake.cage_extrusion = cage_extrusion
+
+
+def create_new_texture_node(node_tree, image, type="Diffuse"):
+    tex_node = node_tree.nodes.new("ShaderNodeTexImage")
+    tex_node.image = image
+    if type in ["Diffuse", "Emit"]:
+        image.colorspace_settings.name = "sRGB"
+    else:
+        image.colorspace_settings.name = "Non-Color"
+    uv_node = node_tree.nodes.new("ShaderNodeUVMap")
+    uv_node.uv_map = bake_uvmap_name
+    node_tree.links.new(uv_node.outputs.get("UV"), tex_node.inputs.get("Vector"))
+    node_tree.nodes.active = tex_node
+
+    return tex_node
+
+
+def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversample=1):
+    # Store original render settings
+    render_settings = get_render_settings()
 
     # Set render settings for baking
-    bpy.context.scene.render.engine = 'CYCLES'
-    bpy.context.scene.cycles.samples = 1
-    bpy.context.scene.render.bake.use_pass_direct = False
-    bpy.context.scene.render.bake.use_pass_indirect = False
-    bpy.context.scene.render.bake.margin = 1
+    set_render_settings(engine="CYCLES",
+                        samples=1,
+                        direct=False,
+                        indirect=False,
+                        margin=1,
+                        clear=True,
+                        selected_to_active=True,
+                        cage_extrusion=0.5)
+
+    size = final_size * oversample
+
+    proxy_object = bpy.context.active_object
+    create_baking_uvs([proxy_object])
+    proxy_object.data.materials.clear()
+    new_mat = bpy.data.materials.new(asset_name)
+    new_mat.use_nodes = True
+
+    proxy_object.data.materials.append(new_mat)
+
+    principled = new_mat.node_tree.nodes.get("Principled BSDF")
+    emit_nodes_dict = {}
+
+    for bake_type in bake_list:
+        new_image = bpy.data.images.new(bake_type, width=size, height=size)
+        if bake_type == "Alpha":
+            new_image.generated_color = (1, 1, 1, 1)
+            bpy.context.scene.render.bake.use_clear = False
+        else:
+            bpy.context.scene.render.bake.use_clear = True
+
+        path = os.path.join(publish_path, "4k", bake_type + ".png")
+        img_format = 'PNG'
+
+        tex_node = create_new_texture_node(new_mat.node_tree, new_image, type=bake_type)
+
+        if bake_type == "Normal":
+            normal_node = new_mat.node_tree.nodes.new("ShaderNodeNormalMap")
+            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), normal_node.inputs.get("Color"))
+            new_mat.node_tree.links.new(normal_node.outputs.get("Normal"), principled.inputs.get("Normal"))
+        else:
+            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), principled.inputs.get(bake_type_to_input[bake_type]))
+
+        principled.inputs.get("Emission Strength").default_value = 1
+
+        if bake_type in non_native_bake_types:
+            print({f"NON_NATIVE BAKE TYPE DECTECTED: {bake_type}"})
+            emit_nodes = prepare_non_native_bake_types(new_mat.node_tree, bake_type)
+            emit_node, strength_node = emit_nodes[0], emit_nodes[1]
+
+            emit_nodes_dict[new_mat.name] = [emit_node, strength_node]
+
+        selection = bpy.context.selected_objects
+        print("selection".upper())
+        print(selection)
+        for ob in selection:
+            if ob.type != 'MESH':
+                ob.select_set(False)
+                continue
+        bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
+        if bake_type in non_native_bake_types:
+            reset_material_after_non_native_bake(emit_nodes_dict)
+
+
+    # Restore original render settings
+    set_render_settings(engine=render_settings["engine"],
+                        samples=render_settings["samples"],
+                        direct=render_settings["direct_pass"],
+                        indirect=render_settings["indirect_pass"],
+                        margin=render_settings["margin"],
+                        clear=render_settings["clear_image"],
+                        selected_to_active=render_settings["selected_to_active"],
+                        cage_extrusion=render_settings["cage_extrusion"])
+
+
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1):
+    # Store original render settings
+    render_settings = get_render_settings()
+
+    # Set render settings for baking
+    set_render_settings(engine="CYCLES",
+                        samples=1,
+                        direct=False,
+                        indirect=False,
+                        margin=1,
+                        clear=True,
+                        selected_to_active=False,
+                        cage_extrusion=0)
 
     size = final_size * oversample
     non_mesh_list = []
@@ -165,17 +279,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
                     continue
 
                 node_tree = material.material.node_tree
-                nodes = node_tree.nodes
-                tex_node = nodes.new("ShaderNodeTexImage")
-                tex_node.image = new_image
-                if bake_type in ["Diffuse", "Emit"]:
-                    new_image.colorspace_settings.name = "sRGB"
-                else:
-                    new_image.colorspace_settings.name = "Non-Color"
-                uv_node = nodes.new("ShaderNodeUVMap")
-                uv_node.uv_map = bake_uvmap_name
-                node_tree.links.new(uv_node.outputs.get("UV"), tex_node.inputs.get("Vector"))
-                nodes.active = tex_node
+                create_new_texture_node(node_tree, new_image, type=bake_type)
 
                 if bake_type in non_native_bake_types:
                     emit_nodes = prepare_non_native_bake_types(node_tree, bake_type)
@@ -192,14 +296,16 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
     for ob in non_mesh_list:
         ob.select_set(True)
 
-
     # Restore original render settings
-    bpy.context.scene.render.engine = render_settings["engine"]
-    bpy.context.scene.cycles.samples = render_settings["samples"]
-    bpy.context.scene.render.bake.use_pass_direct = render_settings["direct_pass"]
-    bpy.context.scene.render.bake.use_pass_indirect = render_settings["indirect_pass"]
-    bpy.context.scene.render.bake.margin = render_settings["margin"]
-    bpy.context.scene.render.bake.use_clear = render_settings["clear_image"]
+    set_render_settings(engine=render_settings["engine"],
+                        samples=render_settings["samples"],
+                        direct=render_settings["direct_pass"],
+                        indirect=render_settings["indirect_pass"],
+                        margin=render_settings["margin"],
+                        clear=render_settings["clear_image"],
+                        selected_to_active=render_settings["selected_to_active"],
+                        cage_extrusion=render_settings["cage_extrusion"])
+
 
 def create_material_from_folder(folder, bake_list):
     new_mat = bpy.data.materials.new(os.path.basename(os.path.dirname(folder)))
