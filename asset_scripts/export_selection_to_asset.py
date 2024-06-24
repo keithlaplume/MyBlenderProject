@@ -88,7 +88,7 @@ def prepare_non_native_bake_types(node_tree, bake_type):
         try:
             emit_node = principled.inputs.get("Emission Color").links[0].from_socket.node
         except:
-            emit_node = nodes.new("ShaderNodeRGB" if bake_type == "Metallic" else "ShaderNodeValue")
+            emit_node = nodes.new("ShaderNodeRGB")
             emit_node.outputs.get("Color").default_value = principled.inputs.get("Emission Color").default_value
 
         try:
@@ -99,29 +99,16 @@ def prepare_non_native_bake_types(node_tree, bake_type):
 
         emit_nodes = [emit_node, strength_node]
 
-        if bake_type == "Metallic":
-            try:
-                metallic_node = principled.inputs.get("Metallic").links[0].from_socket.node
-            except:
-                metallic_node = nodes.new("ShaderNodeValue")
-                metallic_node.outputs.get("Value").default_value = principled.inputs.get("Metallic").default_value
+        try:
+            non_native_node = principled.inputs.get(bake_type).links[0].from_socket.node
+        except:
+            non_native_node = nodes.new("ShaderNodeValue")
+            non_native_node.outputs.get("Value").default_value = principled.inputs.get(bake_type).default_value
 
-            node_tree.links.new(metallic_node.outputs[0], principled.inputs.get("Emission Color"))
-            bake_strength_node = nodes.new("ShaderNodeValue")
-            bake_strength_node.outputs.get("Value").default_value = 1.0
-            node_tree.links.new(bake_strength_node.outputs.get("Value"), principled.inputs.get("Emission Strength"))
-
-        elif bake_type == "Alpha":
-            try:
-                alpha_node = principled.inputs.get("Alpha").links[0].from_socket.node
-            except (IndexError, TypeError):
-                alpha_node = nodes.new("ShaderNodeValue")
-                alpha_node.outputs.get("Value").default_value = principled.inputs.get("Alpha").default_value
-
-            node_tree.links.new(alpha_node.outputs[0], principled.inputs.get("Emission Color"))
-            bake_strength_node = nodes.new("ShaderNodeValue")
-            bake_strength_node.outputs.get("Value").default_value = 1.0
-            node_tree.links.new(bake_strength_node.outputs.get("Value"), principled.inputs.get("Emission Strength"))
+        node_tree.links.new(non_native_node.outputs[0], principled.inputs.get("Emission Color"))
+        bake_strength_node = nodes.new("ShaderNodeValue")
+        bake_strength_node.outputs.get("Value").default_value = 1.0
+        node_tree.links.new(bake_strength_node.outputs.get("Value"), principled.inputs.get("Emission Strength"))
 
     return emit_nodes
 
