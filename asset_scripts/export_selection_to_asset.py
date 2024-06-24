@@ -206,7 +206,7 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
         bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
         if bake_type in non_native_bake_types:
-            reset_material_after_non_native_bake(node_tree, bake_type, emit_nodes_dict)
+            reset_material_after_non_native_bake(emit_nodes_dict)
 
     for ob in non_mesh_list:
         ob.select_set(True)
