@@ -59,10 +59,19 @@ def create_baking_uvs(selection):
         if ob.type == 'MESH':
             bake_uvmap = ob.data.uv_layers.new(name=bake_uvmap_name)
             bake_uvmap.active = True
+    saved_selection = bpy.context.selected_objects
+    active_object = bpy.context.active_object
+    for ob in selection:
+        ob.select_set(True)
+    bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.object.editmode_toggle()
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(island_margin=0.00001)
     bpy.ops.object.editmode_toggle()
+    # reset selection
+    for ob in saved_selection:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = active_object
 
 
 def reset_material_after_non_native_bake(emit_nodes):
@@ -162,6 +171,7 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
     size = final_size * oversample
 
     proxy_object = bpy.context.active_object
+    selection = bpy.context.selected_objects
     create_baking_uvs([proxy_object])
     proxy_object.data.materials.clear()
     new_mat = bpy.data.materials.new(asset_name)
@@ -170,7 +180,20 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
     proxy_object.data.materials.append(new_mat)
 
     principled = new_mat.node_tree.nodes.get("Principled BSDF")
+
     emit_nodes_dict = {}
+    prepared_materials = set()
+
+    # prepare alpha
+    for ob in selection:
+        if ob.type != 'MESH':
+            for material in ob.material_slots:
+                if material.name in prepared_materials:
+                    continue
+
+                node_tree = material.material.node_tree
+                pre_process_transparent(node_tree)
+                prepared_materials.add(material.name)
 
     for bake_type in bake_list:
         new_image = bpy.data.images.new(bake_type, width=size, height=size)
@@ -194,14 +217,21 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
 
         principled.inputs.get("Emission Strength").default_value = 1
 
+        prepared_materials.clear()
         if bake_type in non_native_bake_types:
-            print({f"NON_NATIVE BAKE TYPE DECTECTED: {bake_type}"})
-            emit_nodes = prepare_non_native_bake_types(new_mat.node_tree, bake_type)
-            emit_node, strength_node = emit_nodes[0], emit_nodes[1]
+            print({f"NON_NATIVE BAKE TYPE DETECTED: {bake_type}"})
+            for ob in selection:
+                for material in ob.material_slots:
+                    if material.name in prepared_materials:
+                        continue
+                    print(f"Preparing {material.name}")
+                    node_tree = material.material.node_tree
+                    emit_nodes = prepare_non_native_bake_types(node_tree, bake_type)
+                    emit_node, strength_node = emit_nodes[0], emit_nodes[1]
 
-            emit_nodes_dict[new_mat.name] = [emit_node, strength_node]
+                    emit_nodes_dict[material.name] = [emit_node, strength_node]
+                    prepared_materials.add(material.name)
 
-        selection = bpy.context.selected_objects
         print("selection".upper())
         print(selection)
         for ob in selection:
@@ -210,6 +240,9 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
                 continue
         bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
         if bake_type in non_native_bake_types:
+            print("EMIT NODES:")
+            for node in emit_nodes_dict:
+                print(emit_nodes_dict[node], node)
             reset_material_after_non_native_bake(emit_nodes_dict)
 
 
