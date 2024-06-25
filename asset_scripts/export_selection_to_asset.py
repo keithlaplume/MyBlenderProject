@@ -196,7 +196,7 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
                 prepared_materials.add(material.name)
 
     for bake_type in bake_list:
-        new_image = bpy.data.images.new(bake_type, width=size, height=size)
+        new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
         if bake_type == "Alpha":
             new_image.generated_color = (1, 1, 1, 1)
             bpy.context.scene.render.bake.use_clear = False
@@ -206,16 +206,7 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
         path = os.path.join(publish_path, "4k", bake_type + ".png")
         img_format = 'PNG'
 
-        tex_node = create_new_texture_node(new_mat.node_tree, new_image, type=bake_type)
-
-        if bake_type == "Normal":
-            normal_node = new_mat.node_tree.nodes.new("ShaderNodeNormalMap")
-            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), normal_node.inputs.get("Color"))
-            new_mat.node_tree.links.new(normal_node.outputs.get("Normal"), principled.inputs.get("Normal"))
-        else:
-            new_mat.node_tree.links.new(tex_node.outputs.get("Color"), principled.inputs.get(bake_type_to_input[bake_type]))
-
-        principled.inputs.get("Emission Strength").default_value = 1
+        create_new_texture_node(new_mat.node_tree, new_image, type=bake_type)
 
         prepared_materials.clear()
         if bake_type in non_native_bake_types:
@@ -387,10 +378,27 @@ def main(selection, publish_path, asset_name, bake_list, options):
     if options.get("do_new_uvs"):
         create_baking_uvs(selection)
     if options.get("do_bake_textures"):
-        bake_out_asset_maps(selection, bake_list, asset_name, publish_path)
-        bpy.ops.object.duplicate()
-        selection = bpy.context.selected_objects
+        if options.get("selected_to_active"):
+            bake_to_proxy(bake_list,
+                          asset_name,
+                          publish_path,
+                          final_size=options.get("image_size"),
+                          oversample=options.get("oversample")
+                          )
+            selection = [bpy.context.active_object]
+        else:
+            bake_out_asset_maps(selection,
+                                bake_list,
+                                asset_name,
+                                publish_path,
+                                final_size=options.get("image_size"),
+                                oversample=options.get("oversample")
+                                )
+            bpy.ops.object.duplicate()
+            selection = bpy.context.selected_objects
+
         new_material = create_material_from_folder(os.path.join(publish_path, "4k"), bake_list)
+
         for ob in selection:
             if ob.type == 'MESH':
                 ob.data.materials.clear()
@@ -404,4 +412,9 @@ def main(selection, publish_path, asset_name, bake_list, options):
     if options.get("do_center"):
         bpy.context.object.location = [0, 0, 0]
     if options.get("do_export"):
+        if options.get("do_bake_textures") and options.get("selected_to_active"):
+            selection = bpy.context.selected_objects
+            for ob in selection:
+                ob.select_set(False)
+            bpy.context.active_object.select_set(True)
         export_selection(publish_path, asset_name)
