@@ -8,9 +8,9 @@ def main(resolution):
     selection = bpy.context.selected_objects
     string_to_res = {"4k": 4096, "2k": 2048, "1k": 1024, "512": 512, "256": 256, "128": 128}
 
-    for asset in selection:
-        print(asset)
-        for material in asset.material_slots:
+    for obj in selection:
+        print(obj)
+        for material in obj.material_slots:
             for shading_node in material.material.node_tree.nodes:
                 if shading_node.type=='TEX_IMAGE':
                     file_path = shading_node.image.filepath
