@@ -61,9 +61,9 @@ def create_baking_uvs(selection):
             bake_uvmap.active = True
     saved_selection = bpy.context.selected_objects
     active_object = bpy.context.active_object
+    bpy.ops.object.select_all(action='DESELECT')
     for ob in selection:
         ob.select_set(True)
-    bpy.ops.object.select_all(action='DESELECT')
     bpy.ops.object.editmode_toggle()
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(island_margin=0.00001)
@@ -376,7 +376,10 @@ def main(selection, publish_path, asset_name, bake_list, options):
         options["do_center"] = False
 
     if options.get("do_new_uvs"):
-        create_baking_uvs(selection)
+        if options.get("selected_to_active"):
+            create_baking_uvs([bpy.context.active_object])
+        else:
+            create_baking_uvs(selection)
     if options.get("do_bake_textures"):
         if options.get("selected_to_active"):
             bake_to_proxy(bake_list,
