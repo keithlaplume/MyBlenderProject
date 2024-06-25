@@ -10,7 +10,7 @@ reload(export_selection_to_asset)
 
 from bpy.props import (StringProperty,
                        BoolProperty,
-                       PointerProperty,
+                       PointerProperty, IntProperty,
                        )
 from bpy.types import (Panel,
                        PropertyGroup,
@@ -66,6 +66,21 @@ class MyProperties(PropertyGroup):
         name="Bake Textures to new UVs",
         description="Bool property",
         default=True
+    )
+    selected_to_active: BoolProperty(
+        name="Bake Selected Objects to Active Proxy Object",
+        description="Bool property",
+        default=True
+    )
+    image_size: IntProperty(
+        name="Size of the Image to be Baked",
+        description="Int property",
+        default=4096
+    )
+    oversample: IntProperty(
+        name="Oversample",
+        description="Int property",
+        default=2
     )
     diffuse: BoolProperty(
         name="Diffuse",
@@ -128,6 +143,9 @@ class Publish(bpy.types.Operator):
                    "do_bake_textures": publish_tool.do_bake_textures,
                    "do_export": publish_tool.do_export,
                    "do_center": publish_tool.do_center,
+                   "selected_to_active": publish_tool.selected_to_active,
+                   "image_size": publish_tool.image_size,
+                   "oversample": publish_tool.oversample
                    }
 
         bake_list = []
@@ -213,12 +231,16 @@ class OBJECT_PT_CustomPanel(Panel):
         col4 = layout.column(align=True)
         col4.prop(publish_tool, "do_bake_textures")
         col5 = layout.column(align=True)
+        col5.prop(publish_tool, "selected_to_active")
+        col5.label(text="Maps to bake:")
         col5.prop(publish_tool, "diffuse")
         col5.prop(publish_tool, "metallic")
         col5.prop(publish_tool, "emit")
         col5.prop(publish_tool, "roughness")
         col5.prop(publish_tool, "normal")
         col5.prop(publish_tool, "alpha")
+        col5.prop(publish_tool, "image_size")
+        col5.prop(publish_tool, "oversample")
         if publish_tool.do_new_uvs:
             col4.active = True
         else:
