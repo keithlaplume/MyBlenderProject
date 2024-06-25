@@ -1,6 +1,5 @@
 import bpy
 import os
-
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
 import cv2
 
@@ -18,7 +17,7 @@ def main(resolution):
             if material.name in prepared_materials:
                 continue
             for shading_node in material.material.node_tree.nodes:
-                if shading_node.type == 'TEX_IMAGE':
+                if shading_node.type=='TEX_IMAGE':
                     file_path = shading_node.image.filepath
                     image_name = shading_node.image.name
                     print('IMAGE PATH: {}'.format(file_path))
@@ -32,11 +31,8 @@ def main(resolution):
                         dsize = (string_to_res.get(resolution), string_to_res.get(resolution))
                         # resize image
                         output = cv2.resize(src, dsize)
-                        cv2.imwrite(new_image_name_full, output)
+                        cv2.imwrite(new_image_name_full,output)
 
                     print('NEW PATH: {}'.format(new_image_name_full))
                     shading_node.image.filepath = new_image_name_full
                     prepared_materials.add(material.name)
-
-
-main("2k")
