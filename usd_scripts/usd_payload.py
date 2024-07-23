@@ -1,4 +1,4 @@
-
+import os
 from pxr import Usd, UsdGeom
 
 def resolve_blender_units(xform):
@@ -9,7 +9,6 @@ def add_basic_transform(xform, translation=(0,0,0), rotation=(0,0,0), scale=(1,1
     xform.AddTranslateOp().Set(translation)
     xform.AddRotateXYZOp().Set(rotation)
     xform.AddScaleOp().Set(scale)
-
 
 stage = Usd.Stage.CreateNew('J:/Portfolio_2024/USD Practice/payload.usda')
 building1 = stage.OverridePrim('/MaxHay_Office_Building_Tall_proxy2')
