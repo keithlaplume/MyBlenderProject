@@ -24,7 +24,10 @@ bpy.context.scene.collection.children.link(asset_collection)
 
 for obj in selection:
     asset_collection.objects.link(obj)
-    bpy.context.scene.collection.objects.unlink(obj)
+    try:
+        bpy.context.scene.collection.objects.unlink(obj)
+    except:
+        pass
 
 asset_collection.asset_mark()
 asset_collection.asset_generate_preview()
