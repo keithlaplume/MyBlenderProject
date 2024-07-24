@@ -21,3 +21,5 @@ for obj in selection:
 asset_collection.asset_mark()
 asset_collection.asset_generate_preview()
 asset_collection.asset_data.catalog_id = catalog_ids[proxy_level]
+
+bpy.ops.wm.save_mainfile()
