@@ -66,7 +66,7 @@ def create_baking_uvs(selection):
         ob.select_set(True)
     bpy.ops.object.editmode_toggle()
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(island_margin=0.00001)
+    bpy.ops.uv.smart_project(island_margin=0.00001, scale_to_bounds=True)
     bpy.ops.object.editmode_toggle()
     # reset selection
     for ob in saved_selection:
