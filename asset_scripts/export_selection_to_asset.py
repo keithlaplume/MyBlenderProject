@@ -9,6 +9,9 @@ bake_type_to_input = {"Diffuse": "Base Color",
                       "Roughness": "Roughness",
                       "Normal": "Normal",
                       "Alpha": "Alpha"}
+catalog_ids = {"original": "96aec234-1396-412e-83a0-009c8a364c54",
+               "proxy1": "3ad2712c-e935-42c8-b6e8-67ab3d38b473",
+               "proxy2": "d42e13d3-1926-4577-b380-38e31201cac6"}
 
 def create_value_node(node_tree, default_value):
     value_node = node_tree.nodes.new("ShaderNodeValue")
@@ -359,14 +362,51 @@ def create_material_from_folder(folder, bake_list):
 def export_selection(publish_path, asset_name):
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.object.delete(use_global=False, confirm=False)
-    current_blend_file = bpy.data.filepath
     if not os.path.exists(publish_path):
         os.mkdir(publish_path)
     export_blend_path_full = os.path.normpath(os.path.join(publish_path, asset_name + ".blend"))
     bpy.ops.object.select_all(action='INVERT')
     bpy.ops.wm.save_as_mainfile(filepath=export_blend_path_full)
-    if current_blend_file.endswith(".blend"):
-        bpy.ops.wm.open_mainfile(filepath=current_blend_file)
+
+def export_to_usdc(publish_path, asset_name):
+    if not os.path.exists(publish_path):
+        os.mkdir(publish_path)
+    filepath = os.path.normpath(os.path.join(publish_path, asset_name + ".usdc"))
+    bpy.ops.wm.usd_export(filepath=filepath,
+                          selected_objects_only=True,
+                          export_textures=False,
+                          convert_world_material=False)
+
+def create_collection_asset():
+    asset_name = os.path.basename(bpy.data.filepath).split(".blend")[0]
+    proxy_level = asset_name.split("_")[-1]
+
+    bpy.ops.object.select_all(action='SELECT')
+    selection = bpy.context.selected_objects
+
+    # clear any old collections
+    for collection in bpy.data.collections:
+        print(collection)
+        for child in collection.all_objects:
+            print(child)
+            collection.objects.unlink(child)
+        bpy.data.collections.remove(collection)
+
+    asset_collection = bpy.data.collections.new(asset_name)
+    bpy.context.scene.collection.children.link(asset_collection)
+
+    for obj in selection:
+        asset_collection.objects.link(obj)
+        try:
+            bpy.context.scene.collection.objects.unlink(obj)
+        except:
+            pass
+
+    asset_collection.asset_mark()
+    asset_collection.asset_generate_preview()
+    asset_collection.asset_data.catalog_id = catalog_ids[proxy_level]
+
+    bpy.ops.wm.save_mainfile()
 
 def main(selection, publish_path, asset_name, bake_list, options):
     # Override options to account for dependencies
@@ -420,4 +460,9 @@ def main(selection, publish_path, asset_name, bake_list, options):
             for ob in selection:
                 ob.select_set(False)
             bpy.context.active_object.select_set(True)
+        current_blend_file = bpy.data.filepath
         export_selection(publish_path, asset_name)
+        create_collection_asset()
+        export_to_usdc(publish_path, asset_name)
+        if current_blend_file.endswith(".blend"):
+            bpy.ops.wm.open_mainfile(filepath=current_blend_file)
