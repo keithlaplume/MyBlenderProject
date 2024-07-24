@@ -8,11 +8,19 @@ catalog_ids = {"original": "96aec234-1396-412e-83a0-009c8a364c54",
 asset_name = os.path.basename(bpy.data.filepath).split(".blend")[0]
 proxy_level = asset_name.split("_")[-1]
 
+bpy.ops.object.select_all(action='SELECT')
+selection = bpy.context.selected_objects
+
+# clear any old collections
+for collection in bpy.data.collections:
+    print(collection)
+    for child in collection.all_objects:
+        print(child)
+        collection.objects.unlink(child)
+    bpy.data.collections.remove(collection)
+
 asset_collection = bpy.data.collections.new(asset_name)
 bpy.context.scene.collection.children.link(asset_collection)
-bpy.ops.object.select_all(action='SELECT')
-
-selection = bpy.context.selected_objects
 
 for obj in selection:
     asset_collection.objects.link(obj)
