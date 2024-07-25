@@ -7,6 +7,9 @@ for ob in selection:
         node_tree = material.material.node_tree
         principled = node_tree.nodes.get("Principled BSDF")
 
+        # fix transmission weight
+        principled.inputs.get('Transmission Weight').default_value = 0
+
         # delete reflection texture
         try:
             metallic_node = principled.inputs.get("Metallic").links[0].from_socket.node
