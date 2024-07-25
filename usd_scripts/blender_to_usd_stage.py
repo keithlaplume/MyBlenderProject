@@ -24,13 +24,10 @@ class usd_asset:
         xform.AddRotateXOp(opSuffix='unitsResolve').Set(value=-90)
         xform.AddScaleOp(opSuffix='unitsResolve').Set((100, 100, 100))
 
-    def add_basic_transform(self, xform, translation, rotation, scale):
-        print(f"translation: {translation}")
-        print(f"rotation: {rotation}")
-        print(f"scale: {scale}")
-        xform.AddTranslateOp().Set(translation)
-        xform.AddRotateXYZOp().Set(rotation)
-        xform.AddScaleOp().Set(scale)
+    def add_basic_transform(self, xform):
+        xform.AddTranslateOp().Set(self.location)
+        xform.AddRotateXYZOp().Set(self.rotation)
+        xform.AddScaleOp().Set(self.scale)
 
     def add_to_stage(self, stage):
         new_prim = stage.DefinePrim(f"/{self.name}")
@@ -39,7 +36,7 @@ class usd_asset:
 
         xform = UsdGeom.Xformable(new_prim)
 
-        self.add_basic_transform(xform, self.location, self.rotation, self.scale)
+        self.add_basic_transform(xform)
         self.resolve_blender_units(xform)
 
 
