@@ -33,7 +33,8 @@ class usd_asset:
         xform.AddScaleOp().Set(scale)
 
     def add_to_stage(self, stage):
-        new_prim = stage.OverridePrim(f"/{self.name}")
+        new_prim = stage.DefinePrim(f"/{self.name}")
+        new_prim.SetInstanceable(True)
         new_prim.GetPayloads().AddPayload(os.path.join(ASSET_LIBRARY_PATH, self.usdc_path))
 
         xform = UsdGeom.Xformable(new_prim)
