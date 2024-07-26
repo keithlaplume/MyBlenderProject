@@ -1,3 +1,5 @@
+import sys
+sys.path.append("C:/Users/Keith/PycharmProjects/MyBlenderProject/asset_scripts/")
 import export_selection_to_asset
 import bpy
 import os
@@ -14,7 +16,10 @@ options = {"do_new_uvs": True,
 bake_list = ["Diffuse", "Metallic", "Emit", "Roughness", "Normal"]
 
 selection = bpy.context.selected_objects
-asset_name = os.path.basename(bpy.data.filepath).split(".blend")[0].split("_")[0]
+asset_name = os.path.basename(bpy.data.filepath).split(".blend")[0].replace("_original", "_proxy1")
 publish_path = os.path.dirname(bpy.data.filepath)
+
+print(publish_path)
+print(asset_name)
 
 export_selection_to_asset.main(selection, publish_path, asset_name, bake_list, options)
