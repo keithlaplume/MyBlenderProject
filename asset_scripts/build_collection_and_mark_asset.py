@@ -10,6 +10,7 @@ proxy_level = asset_name.split("_")[-1]
 
 bpy.ops.object.select_all(action='SELECT')
 selection = bpy.context.selected_objects
+bpy.context.view_layer.objects.active = selection[0]
 
 # clear any old collections
 for collection in bpy.data.collections:
