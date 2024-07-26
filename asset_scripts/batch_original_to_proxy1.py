@@ -15,6 +15,7 @@ options = {"do_new_uvs": True,
 
 bake_list = ["Diffuse", "Metallic", "Emit", "Roughness", "Normal"]
 
+bpy.ops.object.select_all(action='SELECT')
 selection = bpy.context.selected_objects
 asset_name = os.path.basename(bpy.data.filepath).split(".blend")[0].replace("_original", "_proxy1")
 publish_path = os.path.dirname(bpy.data.filepath)
