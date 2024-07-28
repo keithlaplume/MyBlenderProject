@@ -20,12 +20,16 @@ bpy.ops.object.select_all(action='SELECT')
 selection = bpy.context.selected_objects
 bpy.context.view_layer.objects.active = selection[0]
 
+print("ADD DECIMATE")
 # add decimate
 for obj in selection:
     if obj.type == 'MESH':
+        bpy.ops.object.modifier_remove(modifier="Subdiv for displacement")
         bpy.ops.object.modifier_add(type='DECIMATE')
         bpy.context.object.modifiers["Decimate"].ratio = 0.25
+        bpy.ops.object.modifier_apply(modifier="Decimate")
 
+print("SWAPPING TEXTURES")
 # swap to 4k texture to 1k
 resolution_switcher.main("1k")
 
