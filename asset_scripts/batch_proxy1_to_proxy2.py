@@ -28,6 +28,7 @@ for obj in selection:
         bpy.ops.object.modifier_add(type='DECIMATE')
         bpy.context.object.modifiers["Decimate"].ratio = 0.25
         bpy.ops.object.modifier_apply(modifier="Decimate")
+        bpy.ops.object.shade_flat()
 
 print("SWAPPING TEXTURES")
 # swap to 4k texture to 1k
