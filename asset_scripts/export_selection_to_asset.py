@@ -13,6 +13,16 @@ catalog_ids = {"original": "96aec234-1396-412e-83a0-009c8a364c54",
                "proxy1": "3ad2712c-e935-42c8-b6e8-67ab3d38b473",
                "proxy2": "d42e13d3-1926-4577-b380-38e31201cac6"}
 
+def find_output(node):
+    output = node.outputs.get("Result")
+    if not output:
+        output = node.outputs.get("Color")
+    if not output:
+        output = node.outputs.get("Value")
+    if not output:
+        output = node.outputs[0]
+    return output
+
 def create_value_node(node_tree, default_value):
     value_node = node_tree.nodes.new("ShaderNodeValue")
     value_node.outputs.get("Value").default_value = default_value
@@ -82,10 +92,11 @@ def reset_material_after_non_native_bake(emit_nodes):
         for material_name, emit_node in emit_nodes.items():
             node_tree = bpy.data.materials[material_name].node_tree
             principled = node_tree.nodes.get("Principled BSDF")
-            node_tree.links.new(emit_node[0].outputs[0], principled.inputs.get("Emission Color"))
-            node_tree.links.new(emit_node[1].outputs[0], principled.inputs.get("Emission Strength"))
+            node_tree.links.new(find_output(emit_node[0]), principled.inputs.get("Emission Color"))
+            node_tree.links.new(find_output(emit_node[1]), principled.inputs.get("Emission Strength"))
 
 def prepare_non_native_bake_types(node_tree, bake_type):
+    print(f"Preparing non-native bake type: {bake_type}")
     emit_nodes = {}
     nodes = node_tree.nodes
     principled = node_tree.nodes.get("Principled BSDF")
@@ -111,7 +122,8 @@ def prepare_non_native_bake_types(node_tree, bake_type):
             non_native_node = nodes.new("ShaderNodeValue")
             non_native_node.outputs.get("Value").default_value = principled.inputs.get(bake_type).default_value
 
-        node_tree.links.new(non_native_node.outputs[0], principled.inputs.get("Emission Color"))
+        output = find_output(non_native_node)
+        node_tree.links.new(output, principled.inputs.get("Emission Color"))
         bake_strength_node = nodes.new("ShaderNodeValue")
         bake_strength_node.outputs.get("Value").default_value = 1.0
         node_tree.links.new(bake_strength_node.outputs.get("Value"), principled.inputs.get("Emission Strength"))
