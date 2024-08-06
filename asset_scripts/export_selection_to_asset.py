@@ -14,14 +14,49 @@ catalog_ids = {"original": "96aec234-1396-412e-83a0-009c8a364c54",
                "proxy2": "d42e13d3-1926-4577-b380-38e31201cac6"}
 
 def find_output(node):
-    output = node.outputs.get("Result")
+    try:
+        output = node.outputs.get("Result")
+    except:
+        output = None
     if not output:
-        output = node.outputs.get("Color")
+        try:
+            output = node.outputs.get("Color")
+        except:
+            output = None
     if not output:
-        output = node.outputs.get("Value")
+        try:
+            output = node.outputs.get("Value")
+        except:
+            output = None
     if not output:
         output = node.outputs[0]
     return output
+
+def disconnect_node(node_tree, type):
+    principled = node_tree.nodes["Principled BSDF"]
+    try:
+        link = principled.inputs.get(type).links[0]
+    except:
+        link = None
+    if link:
+        node = link.from_socket.node
+        node_tree.links.remove(link)
+    else:
+        node = None
+
+    if type == "Metallic":
+        principled.inputs.get("Metallic").default_value = 0
+    if type == "Alpha":
+        principled.inputs.get("Alpha").default_value = 1
+    return node
+
+def reconnect_node(nodes, type):
+    for material_name, node in nodes.items():
+        node_tree = bpy.data.materials[material_name].node_tree
+        principled = node_tree.nodes.get("Principled BSDF")
+        if node:
+            node_tree.links.new(find_output(node), principled.inputs.get(type))
+
 
 def create_value_node(node_tree, default_value):
     value_node = node_tree.nodes.new("ShaderNodeValue")
@@ -296,6 +331,8 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
             prepared_materials.add(material.name)
 
     emit_nodes_dict = {}
+    metallic_nodes_dict = {}
+    alpha_nodes_dict = {}
     for bake_type in bake_list:
         new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
         if bake_type == "Alpha":
@@ -326,11 +363,16 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
 
                     emit_nodes_dict[material.name] = [emit_node, strength_node]
 
+                metallic_nodes_dict[material.name] = disconnect_node(node_tree, "Metallic")
+                alpha_nodes_dict[material.name] = disconnect_node(node_tree, "Alpha")
+
                 prepared_materials.add(material.name)
 
         bake_and_save_image(new_image, path, img_format, bake_type, size, final_size)
         if bake_type in non_native_bake_types:
             reset_material_after_non_native_bake(emit_nodes_dict)
+        reconnect_node(metallic_nodes_dict, "Metallic")
+        reconnect_node(alpha_nodes_dict, "Alpha")
 
     for ob in non_mesh_list:
         ob.select_set(True)
