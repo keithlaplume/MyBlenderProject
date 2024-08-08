@@ -19,8 +19,8 @@ class usd_asset:
 
         self.location = (object.location.x*100, object.location.z*100, object.location.y*-100)
         self.rotation = (math.degrees(object.rotation_euler.x),
-                         math.degrees(object.rotation_euler.y),
-                         math.degrees(object.rotation_euler.z))
+                         math.degrees(object.rotation_euler.z),
+                         math.degrees(object.rotation_euler.y))
         self.scale = (object.scale.x, object.scale.y, object.scale.z)
 
     def resolve_blender_units(self, xform):
