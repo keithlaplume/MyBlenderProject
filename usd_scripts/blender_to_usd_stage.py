@@ -1,6 +1,7 @@
 import bpy
 import os
 from pxr import Usd, UsdGeom
+import math
 
 ASSET_LIBRARY_PATH = "J:/StandardAssets/3D/Published"
 
@@ -17,7 +18,9 @@ class usd_asset:
         self.instance_name = instance_name
 
         self.location = (object.location.x*100, object.location.z*100, object.location.y*-100)
-        self.rotation = (object.rotation_euler.x, object.rotation_euler.y, object.rotation_euler.z)
+        self.rotation = (math.degrees(object.rotation_euler.x),
+                         math.degrees(object.rotation_euler.y),
+                         math.degrees(object.rotation_euler.z))
         self.scale = (object.scale.x, object.scale.y, object.scale.z)
 
     def resolve_blender_units(self, xform):
