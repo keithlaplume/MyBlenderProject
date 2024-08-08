@@ -1,3 +1,5 @@
+import sys
+sys.path.append("C:/Users/Keith/PycharmProjects/MyBlenderProject/venv/Lib/site-packages")
 import bpy
 import os
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
@@ -23,7 +25,7 @@ def main(resolution):
                     print('IMAGE PATH: {}'.format(file_path))
                     base_path = os.path.dirname(os.path.dirname(file_path))
                     new_path = os.path.join(base_path, resolution)
-                    new_image_name_full = os.path.join(new_path, image_name)
+                    new_image_name_full = os.path.join(new_path, os.path.basename(file_path))
                     if not os.path.exists(new_path):
                         os.mkdir(new_path)
                     if not os.path.exists(new_image_name_full):
@@ -31,6 +33,7 @@ def main(resolution):
                         dsize = (string_to_res.get(resolution), string_to_res.get(resolution))
                         # resize image
                         output = cv2.resize(src, dsize)
+                        print(new_image_name_full)
                         cv2.imwrite(new_image_name_full,output)
 
                     print('NEW PATH: {}'.format(new_image_name_full))
