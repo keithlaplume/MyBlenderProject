@@ -232,6 +232,8 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
     principled = new_mat.node_tree.nodes.get("Principled BSDF")
 
     emit_nodes_dict = {}
+    metallic_nodes_dict = {}
+    alpha_nodes_dict = {}
     prepared_materials = set()
 
     # prepare alpha
@@ -271,6 +273,8 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
                     emit_node, strength_node = emit_nodes[0], emit_nodes[1]
 
                     emit_nodes_dict[material.name] = [emit_node, strength_node]
+                    metallic_nodes_dict[material.name] = disconnect_node(node_tree, "Metallic")
+                    alpha_nodes_dict[material.name] = disconnect_node(node_tree, "Alpha")
                     prepared_materials.add(material.name)
 
         print("selection".upper())
@@ -285,6 +289,8 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
             for node in emit_nodes_dict:
                 print(emit_nodes_dict[node], node)
             reset_material_after_non_native_bake(emit_nodes_dict)
+        reconnect_node(metallic_nodes_dict, "Metallic")
+        reconnect_node(alpha_nodes_dict, "Alpha")
 
 
     # Restore original render settings
