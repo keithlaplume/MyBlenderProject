@@ -43,15 +43,16 @@ class usd_asset:
         self.resolve_blender_units(xform)
 
 
-usd_assets = []
+def export(filepath):
+    usd_assets = []
 
-stage = Usd.Stage.CreateNew('J:/Portfolio_2024/USD Practice/from_blender.usda')
+    stage = Usd.Stage.CreateNew(filepath)
 
-for object in bpy.data.objects:
-    if object.instance_type == "COLLECTION":
-        usd_assets.append(usd_asset(object))
+    for object in bpy.data.objects:
+        if object.instance_type == "COLLECTION":
+            usd_assets.append(usd_asset(object))
 
-for usd_asset in usd_assets:
-    usd_asset.add_to_stage(stage)
+    for scene_usd_asset in usd_assets:
+        scene_usd_asset.add_to_stage(stage)
 
-stage.GetRootLayer().Save()
+    stage.GetRootLayer().Save()
