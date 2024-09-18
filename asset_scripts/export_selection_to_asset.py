@@ -74,7 +74,8 @@ def pre_process_transparent(node_tree):
         print("Found material with transparency")
         metallic_value = create_value_node(node_tree, 0.9)
         alpha_value = create_value_node(node_tree, 0.8)
-        emit_color = create_rgb_node(node_tree, (1, 0.928203, 0.333327, 1))
+        emit_color = node_tree.nodes.new("ShaderNodeTexImage")
+        emit_color.image = bpy.data.images.load("J:/StandardAssets/Textures/Mine/glowing_glass.png")
         emit_strength = create_value_node(node_tree, 0.1)
 
         principled = node_tree.nodes.get("Principled BSDF")
@@ -204,7 +205,7 @@ def create_new_texture_node(node_tree, image, type="Diffuse"):
     return tex_node
 
 
-def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversample=1):
+def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversample=1, do_preprocess_transparent=False):
     # Store original render settings
     render_settings = get_render_settings()
 
@@ -236,16 +237,16 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
     alpha_nodes_dict = {}
     prepared_materials = set()
 
-    # prepare alpha
-    for ob in selection:
-        if ob.type != 'MESH':
-            for material in ob.material_slots:
-                if material.name in prepared_materials:
-                    continue
+    if do_preprocess_transparent:
+        for ob in selection:
+            if ob.type != 'MESH':
+                for material in ob.material_slots:
+                    if material.name in prepared_materials:
+                        continue
 
-                node_tree = material.material.node_tree
-                pre_process_transparent(node_tree)
-                prepared_materials.add(material.name)
+                    node_tree = material.material.node_tree
+                    pre_process_transparent(node_tree)
+                    prepared_materials.add(material.name)
 
     for bake_type in bake_list:
         new_image = bpy.data.images.new("bake_" + bake_type, width=size, height=size)
@@ -304,7 +305,7 @@ def bake_to_proxy(bake_list, asset_name, publish_path, final_size=1024, oversamp
                         cage_extrusion=render_settings["cage_extrusion"])
 
 
-def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1):
+def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_size=1024, oversample=1, do_preprocess_transparent=False):
     # Store original render settings
     render_settings = get_render_settings()
 
@@ -322,19 +323,20 @@ def bake_out_asset_maps(selection, bake_list, asset_name, publish_path, final_si
     non_mesh_list = []
     prepared_materials = set()
 
-    for ob in selection:
-        if ob.type != 'MESH':
-            non_mesh_list.append(ob)
-            ob.select_set(False)
-            continue
-
-        for material in ob.material_slots:
-            if material.name in prepared_materials:
+    if do_preprocess_transparent:
+        for ob in selection:
+            if ob.type != 'MESH':
+                non_mesh_list.append(ob)
+                ob.select_set(False)
                 continue
 
-            node_tree = material.material.node_tree
-            pre_process_transparent(node_tree)
-            prepared_materials.add(material.name)
+            for material in ob.material_slots:
+                if material.name in prepared_materials:
+                    continue
+
+                node_tree = material.material.node_tree
+                pre_process_transparent(node_tree)
+                prepared_materials.add(material.name)
 
     emit_nodes_dict = {}
     metallic_nodes_dict = {}
@@ -486,7 +488,8 @@ def main(selection, publish_path, asset_name, bake_list, options):
                           asset_name,
                           publish_path,
                           final_size=options.get("image_size"),
-                          oversample=options.get("oversample")
+                          oversample=options.get("oversample"),
+                          do_preprocess_transparent=True
                           )
             selection = [bpy.context.active_object]
         else:
@@ -495,7 +498,8 @@ def main(selection, publish_path, asset_name, bake_list, options):
                                 asset_name,
                                 publish_path,
                                 final_size=options.get("image_size"),
-                                oversample=options.get("oversample")
+                                oversample=options.get("oversample"),
+                                do_preprocess_transparent=True
                                 )
             bpy.ops.object.duplicate()
             selection = bpy.context.selected_objects
